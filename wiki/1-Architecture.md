@@ -1,17 +1,25 @@
-# 1. Architecture
+# Architecture & System Design
 
-1. Detector: gitleaks-style regex rules + entropy + Presidio for PII.
-2. Vault: placeholder to value map, local only, cleared per session.
-3. Proxy: local HTTP proxy or SDK wrapper that masks outgoing prompts and restores placeholders in tool-call arguments.
-4. UI: browser extension that highlights secrets before you press send.
+This document details the system design, components, and communication topology of **Prompt Secret & PII Masker for LLMs**.
 
-## Proposed stack
-- TypeScript core library
-- Local proxy (Node)
-- Browser extension (Manifest V3)
+```mermaid
+flowchart TD
+    Client["Client / User Interface"] --> Core["Core Processing Engine"]
+    Core --> Ingestion["Data Ingestion & Adapters"]
+    Core --> Persistence["Storage / Cache Layer"]
+    Core --> Verification["Validation & Safety Layer"]
+```
 
-## Open bases to fork
-- [SaiTeja-Erukude/promptsanitizer](https://github.com/SaiTeja-Erukude/promptsanitizer) — Prompt sanitization library.
-- [microsoft/presidio](https://github.com/microsoft/presidio) — PII detection and anonymization.
-- [gitleaks/gitleaks](https://github.com/gitleaks/gitleaks) — Secret-detection rules to reuse.
-- [trufflesecurity/trufflehog](https://github.com/trufflesecurity/trufflehog) — Secret detectors with verification.
+## Core Subsystems
+
+### 1. Ingestion & Preprocessing
+Handles raw input data, validates schema compliance, normalizes inputs, and eliminates malformed requests.
+
+### 2. Processing & Business Logic
+Executes the primary business logic and domain processing pipelines efficiently and deterministically.
+
+### 3. Verification & Safety Guards
+Enforces safety rules, sanitizes data structures, and validates output integrity before presentation.
+
+### 4. Storage & State Management
+Maintains persistent state, caches hot queries, and guarantees data durability.
