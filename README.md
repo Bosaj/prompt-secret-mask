@@ -104,11 +104,12 @@ npm run web:dev
 
 ## Roadmap
 
-- [x] v0.1 — patterns for keys and tokens — [#1](https://github.com/Bosaj/prompt-secret-mask/issues/1), [#8](https://github.com/Bosaj/prompt-secret-mask/issues/8)
-- [x] v0.2 — Moroccan and international personal data — [#2](https://github.com/Bosaj/prompt-secret-mask/issues/2), [#9](https://github.com/Bosaj/prompt-secret-mask/issues/9)
-- [x] v0.3 — vault that restores values in replies — [#3](https://github.com/Bosaj/prompt-secret-mask/issues/3), [#10](https://github.com/Bosaj/prompt-secret-mask/issues/10)
-- [x] v0.4 — local proxy with streaming — [#4](https://github.com/Bosaj/prompt-secret-mask/issues/4), [#11](https://github.com/Bosaj/prompt-secret-mask/issues/11)
-- [ ] Try the proxy against the real Anthropic and OpenAI APIs; publish on npm
+- [x] v0.1 — detector with a test corpus, patterns for keys and tokens — [#1](https://github.com/Bosaj/prompt-secret-mask/issues/1), [#8](https://github.com/Bosaj/prompt-secret-mask/issues/8)
+- [x] v0.2 — placeholder vault, Moroccan and international personal data — [#2](https://github.com/Bosaj/prompt-secret-mask/issues/2), [#9](https://github.com/Bosaj/prompt-secret-mask/issues/9)
+- [x] v0.3 — restore values in replies, local proxy — [#3](https://github.com/Bosaj/prompt-secret-mask/issues/3), [#10](https://github.com/Bosaj/prompt-secret-mask/issues/10)
+- [x] v0.4 — streaming through the proxy — [#11](https://github.com/Bosaj/prompt-secret-mask/issues/11)
+- [ ] Browser extension for chat UIs — [#4](https://github.com/Bosaj/prompt-secret-mask/issues/4)
+- [ ] Try the proxy against the real Anthropic and OpenAI APIs (so far: a fake provider); publish on npm
 
 ## For LLM agents & contributors continuing this project
 
