@@ -129,6 +129,60 @@ describe('proxy', () => {
     expect(provider.seen).toHaveLength(0)
   })
 
+  it('never sends a request, or a restored reply, to a host taken from the path', async () => {
+    const provider = await fakeProvider(() => ({ type: 'application/json', chunks: ['{}'] }))
+    const attacker = await fakeProvider(() => ({ type: 'text/plain', chunks: ['[[GITHUB_TOKEN_1]]'] }))
+    const vault = new Vault()
+    const proxy = await proxyTo(provider.url, vault)
+    await fetch(`${proxy}/v1/messages`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: chat(`t ${TOKEN}`) })
+    const http = await import('node:http')
+    const attackerHost = new URL(attacker.url).host
+    for (const path of [`//${attackerHost}/x`, `/\\${attackerHost}/x`, `${attacker.url}/x`]) {
+      const { status, body } = await new Promise<{ status: number; body: string }>((resolve) => {
+        const req = http.request({ host: '127.0.0.1', port: Number(new URL(proxy).port), path, method: 'POST', headers: { 'content-type': 'text/plain' } }, (r) => {
+          let b = ''
+          r.on('data', (c: Buffer) => (b += c.toString()))
+          r.on('end', () => resolve({ status: r.statusCode ?? 0, body: b }))
+        })
+        req.end('x')
+      })
+      expect(status).toBe(400)
+      expect(body).not.toContain(TOKEN)
+    }
+    expect(attacker.seen).toHaveLength(0)
+  })
+
+  it('refuses requests sent by a web page', async () => {
+    const provider = await fakeProvider(() => ({ type: 'application/json', chunks: ['{}'] }))
+    const proxy = await proxyTo(provider.url)
+    const fromPage = await fetch(`${proxy}/v1/messages`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://evil.example' }, body: chat('hi') })
+    const crossSite = await fetch(`${proxy}/v1/messages`, { method: 'POST', headers: { 'content-type': 'application/json', 'sec-fetch-site': 'cross-site' }, body: chat('hi') })
+    const preflight = await fetch(`${proxy}/v1/messages`, { method: 'OPTIONS' })
+    expect([fromPage.status, crossSite.status, preflight.status]).toEqual([403, 403, 403])
+    expect(provider.seen).toHaveLength(0)
+  })
+
+  it('does not hand CORS headers from the provider to the caller', async () => {
+    const server = createServer((_req, res) => {
+      res.setHeader('access-control-allow-origin', '*')
+      res.setHeader('content-type', 'application/json')
+      res.end('{}')
+    })
+    servers.push(server)
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
+    const proxy = await proxyTo(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)
+    const res = await fetch(`${proxy}/v1/messages`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: chat('hi') })
+    expect(res.headers.get('access-control-allow-origin')).toBeNull()
+  })
+
+  it('refuses a body type it cannot mask', async () => {
+    const provider = await fakeProvider(() => ({ type: 'application/json', chunks: ['{}'] }))
+    const proxy = await proxyTo(provider.url)
+    const res = await fetch(`${proxy}/v1/files`, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: `token ${TOKEN}` })
+    expect(res.status).toBe(415)
+    expect(provider.seen).toHaveLength(0)
+  })
+
   it('reports a provider it cannot reach without repeating the prompt', async () => {
     const proxy = await proxyTo('http://127.0.0.1:9')
     const res = await fetch(`${proxy}/v1/messages`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: chat(`t ${TOKEN}`) })
