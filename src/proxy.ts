@@ -151,15 +151,38 @@ const readBody = (req: IncomingMessage) =>
   })
 
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
-const HOP_BY_HOP = new Set(['host', 'connection', 'content-length', 'accept-encoding', 'transfer-encoding', 'keep-alive'])
+const HOP_BY_HOP = new Set(['host', 'connection', 'content-length', 'accept-encoding', 'transfer-encoding', 'keep-alive', 'origin', 'referer'])
+/** Response headers that would let a web page read the reply, or that the proxy rewrites itself. */
+const DROP_RESPONSE = /^(content-length|content-encoding|transfer-encoding|connection|access-control-.*)$/i
+
+const forbid = (res: ServerResponse, status: number, message: string) => {
+  res.statusCode = status
+  res.end(message)
+}
+
+/**
+ * Where a request goes. Only the path and query come from the caller: the origin is always the
+ * configured upstream, so a path like `//evil.example/x` can't send a request, or the restored
+ * secrets in its reply, anywhere else.
+ */
+export function upstreamUrl(reqUrl: string, upstream: string): URL | null {
+  if (!reqUrl.startsWith('/') || reqUrl.startsWith('//') || reqUrl.startsWith('/\\')) return null
+  const base = new URL(upstream)
+  const url = new URL(reqUrl, base)
+  return url.origin === base.origin ? url : null
+}
 
 async function handle(req: IncomingMessage, res: ServerResponse, options: ProxyOptions, vault: Vault) {
   // A web page can't reach this through DNS rebinding: only local Host names are served
-  if (!LOCAL_HOST.test(req.headers.host ?? '')) {
-    res.statusCode = 403
-    res.end('forbidden')
-    return
+  if (!LOCAL_HOST.test(req.headers.host ?? '')) return forbid(res, 403, 'forbidden')
+  // SDKs don't send these; browsers do. A page open in the same browser must not be able to use the
+  // proxy, because the reply carries the real values restored from the vault.
+  const site = req.headers['sec-fetch-site']
+  if (req.headers.origin !== undefined || (site !== undefined && site !== 'none') || req.method === 'OPTIONS') {
+    return forbid(res, 403, 'browser requests are not served')
   }
+  const target = upstreamUrl(req.url ?? '/', options.upstream ?? defaultUpstream(req.url ?? '/'))
+  if (!target) return forbid(res, 400, 'bad request path')
   const raw = await readBody(req)
   let body: BodyInit | undefined = raw.length ? new Uint8Array(raw) : undefined
   const isJson = /json/.test(req.headers['content-type'] ?? '')
@@ -178,18 +201,20 @@ async function handle(req: IncomingMessage, res: ServerResponse, options: ProxyO
     if (result.labels.length) options.onMask?.(result.labels.length, [...new Set(result.labels)])
   } else if (raw.length && !isJson && (req.headers['content-type'] ?? '').startsWith('text/')) {
     body = mask(raw.toString('utf8'), vault, options).masked
+  } else if (raw.length) {
+    // Multipart, form or binary bodies can't be inspected: refuse rather than send them as they are
+    return forbid(res, 415, 'only JSON and text bodies can be masked')
   }
 
   const headers = new Headers()
   for (const [k, v] of Object.entries(req.headers)) {
     if (!HOP_BY_HOP.has(k) && typeof v === 'string') headers.set(k, v)
   }
-  const url = new URL(req.url ?? '/', options.upstream ?? defaultUpstream(req.url ?? '/'))
-  const upstream = await fetch(url, { method: req.method ?? 'POST', headers, ...(body !== undefined ? { body } : {}) })
+  const upstream = await fetch(target, { method: req.method ?? 'POST', headers, ...(body !== undefined ? { body } : {}) })
 
   res.statusCode = upstream.status
   upstream.headers.forEach((v, k) => {
-    if (!['content-length', 'content-encoding', 'transfer-encoding', 'connection'].includes(k)) res.setHeader(k, v)
+    if (!DROP_RESPONSE.test(k)) res.setHeader(k, v)
   })
   const type = upstream.headers.get('content-type') ?? ''
   if (!upstream.body) {
