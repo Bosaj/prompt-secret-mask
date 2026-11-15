@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Prompt Secret Mask</title>
+    <style>
+      body {
+        width: 300px;
+        margin: 0;
+        padding: 14px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #0f172a;
+        color: #f8fafc;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 4px;
+      }
+      p {
+        font-size: 12px;
+        color: #94a3b8;
+        margin: 0 0 12px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-top: 1px solid #1e293b;
+        font-size: 13px;
+      }
+      .stats {
+        background: #1e293b;
+        border-radius: 8px;
+        padding: 10px;
+        margin: 10px 0;
+        font-size: 12px;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      button {
+        flex: 1;
+        padding: 7px 10px;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        background: #1e293b;
+        color: #f8fafc;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #10b981;
+        border-color: #059669;
+        color: #022c22;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Prompt Secret Mask</h1>
+    <p>Local-only vault for ChatGPT, Claude, Gemini &amp; Copilot</p>
+    <div class="stats">
+      <div>Active Tab Vault: <strong id="vault-size">0</strong> secrets</div>
+      <div style="margin-top: 4px">Total Masked: <strong id="masked-total">0</strong> items</div>
+    </div>
+    <label class="row">
+      <span>Auto-mask on Send</span>
+      <input type="checkbox" id="toggle-enabled" checked />
+    </label>
+    <label class="row">
+      <span>Restore in AI Replies</span>
+      <input type="checkbox" id="toggle-unmask" checked />
+    </label>
+    <div class="actions">
+      <button id="btn-mask-now" class="primary">Mask Draft</button>
+      <button id="btn-clear">Clear Vault</button>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

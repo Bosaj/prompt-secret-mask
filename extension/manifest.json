@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Prompt Secret Mask",
+  "version": "0.4.0",
+  "description": "Masks API keys, tokens, and personal data in ChatGPT, Claude, Gemini, and AI chat UIs before sending, and restores them in responses.",
+  "permissions": ["storage", "activeTab"],
+  "action": {
+    "default_title": "Prompt Secret Mask",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://www.perplexity.ai/*",
+        "https://perplexity.ai/*",
+        "https://chat.mistral.ai/*",
+        "https://copilot.microsoft.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
